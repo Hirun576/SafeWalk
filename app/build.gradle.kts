@@ -4,16 +4,12 @@ plugins {
 
 android {
     namespace = "com.s23010145.safewalk"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.s23010145.safewalk"
         minSdk = 30
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
