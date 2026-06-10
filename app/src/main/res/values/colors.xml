@@ -5,6 +5,29 @@
     <color name="purple_700">#FF3700B3</color>
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+
+
+    <!-- Brand -->
+    <color name="primary">#2563EB</color>
+    <color name="primary_dark">#1D4ED8</color>
+    <color name="primary_light">#DBEAFE</color>
+
+    <!-- Backgrounds -->
+    <color name="background">#F1F0EC</color>
+    <color name="surface">#FFFFFF</color>
+
+    <!-- Text -->
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#64748B</color>
+
+    <!-- UI -->
+    <color name="divider">#E2E8F0</color>
+    <color name="input_stroke">#CBD5E1</color>
+    <color name="input_stroke_focused">#2563EB</color>
+
+    <!-- Feedback -->
+    <color name="error">#EF4444</color>
+    <color name="success">#22C55E</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
 </resources>
