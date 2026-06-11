@@ -48,4 +48,7 @@ dependencies {
     implementation("com.google.firebase:firebase-storage")
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.2.0")
+
+    // Circular profile image (used in nav drawer)
+    implementation("de.hdodenhof:circleimageview:3.1.0")
 }

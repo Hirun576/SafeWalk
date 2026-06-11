@@ -24,13 +24,17 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".RegisterActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".HomeActivity"
-            android:exported="false" />
+        <activity android:name=".RegisterActivity"   android:exported="false" />
+        <activity android:name=".HomeActivity"       android:exported="false" />
+        <activity android:name=".MapActivity"        android:exported="false" />
+        <activity android:name=".EmergencyActivity"  android:exported="false" />
+        <activity android:name=".ContactsActivity"   android:exported="false" />
+        <activity android:name=".HistoryActivity"    android:exported="false" />
+        <activity android:name=".ProfileActivity"    android:exported="false" />
+        <activity android:name=".SettingsActivity"   android:exported="false" />
+        <activity android:name=".SensorActivity"     android:exported="false" />
+        <activity android:name=".RecordingActivity"  android:exported="false" />
+        <activity android:name=".RouteActivity"      android:exported="false" />
 
     </application>
 
