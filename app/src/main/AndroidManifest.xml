@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -13,6 +18,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SafeWalk" >
+
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_key" />
 
         <!-- LOGIN is the app entry point -->
         <activity
@@ -35,6 +45,12 @@
         <activity android:name=".SensorActivity"     android:exported="false" />
         <activity android:name=".RecordingActivity"  android:exported="false" />
         <activity android:name=".RouteActivity"      android:exported="false" />
+
+        <!--WalkForegroundService — keeps GPS tracking alive while the screen is off-->
+        <service
+            android:name=".WalkForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
     </application>
 
