@@ -228,7 +228,7 @@ class SensorActivity : AppCompatActivity(), SensorEventListener {
             override fun onFinish() {
                 fallAlertDialog?.dismiss()
                 // Countdown finished — send to EmergencyActivity
-                //launchEmergency()
+                launchEmergency()
             }
         }.start()
     }
@@ -242,14 +242,14 @@ class SensorActivity : AppCompatActivity(), SensorEventListener {
         if (isFallDetectionEnabled) registerSensors()
     }
 
-//    private fun launchEmergency() {
-//        fallDialogShowing = false
-//        val intent = Intent(this, EmergencyActivity::class.java).apply {
-//            putExtra(EmergencyActivity.EXTRA_AUTO_TRIGGER, true)
-//        }
-//        startActivity(intent)
-//        finish()
-//    }
+    private fun launchEmergency() {
+        fallDialogShowing = false
+        val intent = Intent(this, EmergencyActivity::class.java).apply {
+            putExtra(EmergencyActivity.EXTRA_AUTO_TRIGGER, true)
+        }
+        startActivity(intent)
+        finish()
+    }
 
 
     // UI helpers
