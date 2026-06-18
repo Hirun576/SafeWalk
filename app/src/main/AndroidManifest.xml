@@ -52,6 +52,7 @@
         <activity android:name=".SensorActivity"     android:exported="false" />
         <activity android:name=".RecordingActivity"  android:exported="false" />
         <activity android:name=".RouteActivity"      android:exported="false" />
+        <activity android:name=".SafeWalkApp"        android:exported="false" />
 
         <!--WalkForegroundService — keeps GPS tracking alive while the screen is off-->
         <service
