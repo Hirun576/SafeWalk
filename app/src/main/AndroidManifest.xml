@@ -31,6 +31,10 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="${google_maps_key}" />
 
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
+
         <!-- LOGIN is the app entry point -->
         <activity
             android:name=".LoginActivity"

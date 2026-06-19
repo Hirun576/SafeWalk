@@ -39,13 +39,11 @@
 
                 <de.hdodenhof.circleimageview.CircleImageView
                     android:id="@+id/imgLogo"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:layout_marginStart="8dp"
-                    android:src="@drawable/ic_safewalk_logo"
-                    android:contentDescription="SafeWalk"
-                    app:civ_border_width="1.5dp"
-                    app:civ_border_color="@color/white" />
+                    android:src="@mipmap/ic_launcher"
+                    android:contentDescription="SafeWalk" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -56,7 +54,7 @@
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="@color/white"
-                    android:fontFamily="sans-serif-black"
+                    android:fontFamily="@font/poppins_bold"
                     android:letterSpacing="0.02" />
 
             </LinearLayout>
@@ -115,11 +113,11 @@
                                 android:id="@+id/tvUsername"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:fontFamily="@font/poppins_bold"
                                 android:text="..."
-                                android:textSize="28sp"
-                                android:textStyle="bold"
                                 android:textColor="@color/text_primary"
-                                android:fontFamily="sans-serif-condensed-light" />
+                                android:textSize="28sp"
+                                android:textStyle="bold" />
 
                             <View
                                 android:layout_width="40dp"
@@ -201,7 +199,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
-                                    android:text="Track your route in real‑time"
+                                    android:text="Smart tracking for safer walks"
                                     android:textSize="14sp"
                                     android:textColor="#E0F2FE" />
                             </LinearLayout>
@@ -281,124 +279,139 @@
                         </LinearLayout>
                     </androidx.cardview.widget.CardView>
 
-                    <!-- Contacts + History side by side -->
-                    <LinearLayout
+                    <!-- Emergency Contacts -->
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/cardContacts"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="16dp">
+                        android:layout_marginBottom="16dp"
+                        app:cardCornerRadius="24dp"
+                        app:cardElevation="2dp"
+                        app:cardBackgroundColor="@color/surface"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
-                        <!-- Contacts -->
-                        <com.google.android.material.card.MaterialCardView
-                            android:id="@+id/cardContacts"
-                            android:layout_width="0dp"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="8dp"
-                            app:cardCornerRadius="16dp"
-                            app:cardElevation="2dp"
-                            app:cardBackgroundColor="@color/surface"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:foreground="?attr/selectableItemBackground">
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="24dp">
 
                             <LinearLayout
-                                android:layout_width="match_parent"
+                                android:layout_width="52dp"
+                                android:layout_height="52dp"
+                                android:gravity="center"
+                                android:background="@drawable/bg_icon_green">
+
+                                <ImageView
+                                    android:layout_width="26dp"
+                                    android:layout_height="26dp"
+                                    android:src="@drawable/ic_contacts"
+                                    android:contentDescription="Contacts"
+                                    app:tint="@color/success" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
+                                android:layout_weight="1"
                                 android:orientation="vertical"
-                                android:gravity="center_horizontal"
-                                android:padding="16dp">
-
-                                <LinearLayout
-                                    android:layout_width="48dp"
-                                    android:layout_height="48dp"
-                                    android:gravity="center"
-                                    android:background="@drawable/bg_icon_green">
-
-                                    <ImageView
-                                        android:layout_width="24dp"
-                                        android:layout_height="24dp"
-                                        android:src="@drawable/ic_contacts"
-                                        android:contentDescription="Contacts"
-                                        app:tint="@color/success" />
-                                </LinearLayout>
+                                android:layout_marginStart="16dp">
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="10dp"
-                                    android:text="Contacts"
-                                    android:textSize="15sp"
+                                    android:text="Emergency Contacts"
+                                    android:textSize="20sp"
                                     android:textStyle="bold"
                                     android:textColor="@color/text_primary" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:text="Manage trusted"
-                                    android:textSize="12sp"
-                                    android:textColor="@color/text_secondary"
-                                    android:gravity="center" />
+                                    android:text="Manage your trusted contacts"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/text_secondary" />
                             </LinearLayout>
-                        </com.google.android.material.card.MaterialCardView>
 
-                        <!-- History -->
-                        <com.google.android.material.card.MaterialCardView
-                            android:id="@+id/cardHistory"
-                            android:layout_width="0dp"
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_chevron_right"
+                                android:contentDescription="Go"
+                                app:tint="@color/text_secondary" />
+
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- History -->
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/cardHistory"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="24dp"
+                        app:cardCornerRadius="24dp"
+                        app:cardElevation="2dp"
+                        app:cardBackgroundColor="@color/surface"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="8dp"
-                            app:cardCornerRadius="16dp"
-                            app:cardElevation="2dp"
-                            app:cardBackgroundColor="@color/surface"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:foreground="?attr/selectableItemBackground">
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="24dp">
 
                             <LinearLayout
-                                android:layout_width="match_parent"
+                                android:layout_width="52dp"
+                                android:layout_height="52dp"
+                                android:gravity="center"
+                                android:background="@drawable/bg_icon_orange">
+
+                                <ImageView
+                                    android:layout_width="26dp"
+                                    android:layout_height="26dp"
+                                    android:src="@drawable/ic_history"
+                                    android:contentDescription="History"
+                                    app:tint="@color/warning" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
+                                android:layout_weight="1"
                                 android:orientation="vertical"
-                                android:gravity="center_horizontal"
-                                android:padding="16dp">
-
-                                <LinearLayout
-                                    android:layout_width="48dp"
-                                    android:layout_height="48dp"
-                                    android:gravity="center"
-                                    android:background="@drawable/bg_icon_orange">
-
-                                    <ImageView
-                                        android:layout_width="24dp"
-                                        android:layout_height="24dp"
-                                        android:src="@drawable/ic_history"
-                                        android:contentDescription="History"
-                                        app:tint="@color/warning" />
-                                </LinearLayout>
+                                android:layout_marginStart="16dp">
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="10dp"
                                     android:text="History"
-                                    android:textSize="15sp"
+                                    android:textSize="20sp"
                                     android:textStyle="bold"
                                     android:textColor="@color/text_primary" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:text="View past walks"
-                                    android:textSize="12sp"
-                                    android:textColor="@color/text_secondary"
-                                    android:gravity="center" />
+                                    android:text="View past walk incidents"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/text_secondary" />
                             </LinearLayout>
-                        </com.google.android.material.card.MaterialCardView>
-                    </LinearLayout>
 
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_chevron_right"
+                                android:contentDescription="Go"
+                                app:tint="@color/text_secondary" />
+
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
                 </LinearLayout>
             </ScrollView>
         </FrameLayout>
