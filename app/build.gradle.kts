@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     id("com.google.gms.google-services")
+    alias(libs.plugins.secrets)
 }
 
 android {
@@ -15,9 +16,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        manifestPlaceholders["google_maps_key"] =
-            project.findProperty("google_maps_key") ?: ""
     }
 
     buildTypes {

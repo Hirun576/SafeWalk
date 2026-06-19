@@ -13,10 +13,9 @@
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
 
     <application
+        android:name=".SafeWalkApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -56,7 +55,6 @@
         <activity android:name=".SensorActivity"     android:exported="false" />
         <activity android:name=".RecordingActivity"  android:exported="false" />
         <activity android:name=".RouteActivity"      android:exported="false" />
-        <activity android:name=".SafeWalkApp"        android:exported="false" />
 
         <!--WalkForegroundService — keeps GPS tracking alive while the screen is off-->
         <service
