@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:background="@drawable/bg_dialog_rounded"
+    android:padding="28dp">
+
+    <!-- Warning icon -->
+    <ImageView
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:src="@drawable/ic_warning"
+        android:contentDescription="Fall detected"
+        app:tint="@color/error" />
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Fall Detected!"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@color/error" />
+
+    <!-- Message -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="Sending emergency alert in…"
+        android:textSize="15sp"
+        android:textColor="@color/text_secondary" />
+
+    <!-- Countdown number -->
+    <TextView
+        android:id="@+id/tvCountdown"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:text="10"
+        android:textSize="40sp"
+        android:textStyle="bold"
+        android:textColor="@color/white"
+        android:background="@drawable/bg_countdown_circle" />
+
+    <!-- Sub message -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:text="If you are okay, tap the button below to cancel."
+        android:textSize="13sp"
+        android:textColor="@color/text_secondary" />
+
+</LinearLayout>

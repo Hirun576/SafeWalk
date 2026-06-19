@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">SafeWalk</string>
+    <string name="creating_account">Creating account…</string>
+    <string name="logging_account">Logging in…</string>
 </resources>

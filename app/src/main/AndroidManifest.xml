@@ -2,7 +2,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <application
+        android:name=".SafeWalkApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -10,6 +23,45 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SafeWalk" />
+        android:theme="@style/Theme.SafeWalk" >
+
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${google_maps_key}" />
+
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
+
+        <!-- LOGIN is the app entry point -->
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".RegisterActivity"   android:exported="false" />
+        <activity android:name=".HomeActivity"       android:exported="false" />
+        <activity android:name=".MapActivity"        android:exported="false" />
+        <activity android:name=".EmergencyActivity"  android:exported="false" />
+        <activity android:name=".ContactsActivity"   android:exported="false" />
+        <activity android:name=".HistoryActivity"    android:exported="false" />
+        <activity android:name=".ProfileActivity"    android:exported="false" />
+        <activity android:name=".SettingsActivity"   android:exported="false" />
+        <activity android:name=".SensorActivity"     android:exported="false" />
+        <activity android:name=".RecordingActivity"  android:exported="false" />
+        <activity android:name=".RouteActivity"      android:exported="false" />
+
+        <!--WalkForegroundService — keeps GPS tracking alive while the screen is off-->
+        <service
+            android:name=".WalkForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+    </application>
 
 </manifest>
