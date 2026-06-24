@@ -2,4 +2,12 @@
     <string name="app_name">SafeWalk</string>
     <string name="creating_account">Creating account…</string>
     <string name="logging_account">Logging in…</string>
+
+    <!--Google Sign-In -->
+    <string name="default_web_client_id">707117107121-atn1ig0gefius1rptqp77sbla74eel2a.apps.googleusercontent.com</string>
+
+    <!-- Facebook Login -->
+    <string name="facebook_app_id">1408600801297841</string>
+    <string name="fb_login_protocol_scheme">fb1408600801297841</string>
+    <string name="facebook_client_token">64dbacfcc9ba6689b1dad492a291c83c</string>
 </resources>

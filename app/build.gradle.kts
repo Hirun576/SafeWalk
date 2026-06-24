@@ -54,6 +54,9 @@ dependencies {
     // Google Maps SDK
     implementation("com.google.android.gms:play-services-maps:20.0.0")
 
+    // Facebook Login SDK
+    implementation("com.facebook.android:facebook-login:18.2.3")
+
     // Fused Location Provider
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
