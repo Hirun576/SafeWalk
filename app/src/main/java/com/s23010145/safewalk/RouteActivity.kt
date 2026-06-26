@@ -2,12 +2,18 @@ package com.s23010145.safewalk
 
 import android.Manifest
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Location
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.os.Looper
-import android.util.Log
+import android.view.LayoutInflater
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -36,16 +42,20 @@ import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
-class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
+class RouteActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListener {
 
     companion object {
-        const val EXTRA_DEST_LAT               = "dest_lat"
-        const val EXTRA_DEST_LNG               = "dest_lng"
-        const val EXTRA_DEST_NAME              = "dest_name"
-        const val EXTRA_FALL_DETECTION_ENABLED = "fall_detection_enabled"
-        const val REQUEST_SENSOR               = 1001
-        private const val TAG                  = "RouteActivity"
+        const val EXTRA_DEST_LAT  = "dest_lat"
+        const val EXTRA_DEST_LNG  = "dest_lng"
+        const val EXTRA_DEST_NAME = "dest_name"
+
+        // Fall-detection thresholds
+        private const val ACCEL_FALL_THRESHOLD      = 25.0f
+        private const val ACCEL_FREE_FALL_THRESHOLD = 3.0f
+        private const val GYRO_THRESHOLD            = 6.0f
+        private const val FALL_COUNTDOWN_MS         = 10_000L
     }
 
     private lateinit var map: GoogleMap
@@ -63,9 +73,26 @@ class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var destinationLatLng: LatLng? = null
     private var destinationName: String    = ""
-    private var isFallDetectionEnabled     = false
     private var currentLatLng: LatLng?     = null
     private var routeFetched               = false
+    private lateinit var sensorManager: SensorManager
+    private var accelerometer: Sensor? = null
+    private var gyroscope: Sensor? = null
+    private var isFallDetectionEnabled = false
+    private var sensorsCurrentlyRegistered = false
+    private var freeFallDetected  = false
+    private var freeFallTimestamp = 0L
+    private var lastGyroMag       = 0f
+    private var fallDialogShowing = false
+    private var countdownTimer: CountDownTimer? = null
+    private var fallAlertDialog: AlertDialog? = null
+
+    // Fires the instant the preference changes from ANY screen
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == SettingsActivity.KEY_FALL_DETECTION) {
+            applyFallDetectionState(FallDetectionPrefs.isEnabled(this))
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +104,9 @@ class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
         destinationLatLng = LatLng(lat, lng)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        gyroscope     = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
 
         initViews()
         setupMap()
@@ -84,8 +114,21 @@ class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
         setClickListeners()
         setupBackHandler()
         startWalkService()
+
+        // Pick up whatever the user already had set
+        applyFallDetectionState(FallDetectionPrefs.isEnabled(this))
     }
 
+    override fun onResume() {
+        super.onResume()
+        FallDetectionPrefs.registerListener(this, prefsListener)
+        applyFallDetectionState(FallDetectionPrefs.isEnabled(this))
+    }
+
+    override fun onPause() {
+        super.onPause()
+        FallDetectionPrefs.unregisterListener(this, prefsListener)
+    }
 
     // Foreground service
     private fun startWalkService() {
@@ -99,7 +142,6 @@ class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
             action = WalkForegroundService.ACTION_STOP
         })
     }
-
 
     // Init
     private fun initViews() {
@@ -121,8 +163,6 @@ class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
     }
 
-
-    // Map ready
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         map.uiSettings.isZoomControlsEnabled = false
@@ -139,19 +179,121 @@ class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    // FALL DETECTION
+    private fun applyFallDetectionState(enabled: Boolean) {
+        isFallDetectionEnabled = enabled
+        updateFallDetectionUI()
 
-    // Location updates — fetch route on first fix
+        if (enabled && !sensorsCurrentlyRegistered) {
+            registerSensors()
+        } else if (!enabled && sensorsCurrentlyRegistered) {
+            unregisterSensors()
+        }
+    }
+
+    private fun registerSensors() {
+        accelerometer?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        gyroscope?.let     { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        sensorsCurrentlyRegistered = true
+    }
+
+    private fun unregisterSensors() {
+        sensorManager.unregisterListener(this)
+        sensorsCurrentlyRegistered = false
+        freeFallDetected = false
+    }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        when (event.sensor.type) {
+            Sensor.TYPE_ACCELEROMETER -> handleAccelerometer(event)
+            Sensor.TYPE_GYROSCOPE     -> handleGyroscope(event)
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) { /* no-op */ }
+
+    private fun handleAccelerometer(event: SensorEvent) {
+        val x = event.values[0]; val y = event.values[1]; val z = event.values[2]
+        val magnitude = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+
+        if (!isFallDetectionEnabled || fallDialogShowing) return
+
+        if (magnitude < ACCEL_FREE_FALL_THRESHOLD) {
+            freeFallDetected  = true
+            freeFallTimestamp = System.currentTimeMillis()
+        }
+
+        if (freeFallDetected &&
+            System.currentTimeMillis() - freeFallTimestamp < 500 &&
+            magnitude > ACCEL_FALL_THRESHOLD &&
+            lastGyroMag > GYRO_THRESHOLD) {
+            freeFallDetected = false
+            triggerFallAlert()
+        }
+
+        if (System.currentTimeMillis() - freeFallTimestamp > 500) {
+            freeFallDetected = false
+        }
+    }
+
+    private fun handleGyroscope(event: SensorEvent) {
+        val x = event.values[0]; val y = event.values[1]; val z = event.values[2]
+        lastGyroMag = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+    }
+
+    // Fall alert countdown
+    private fun triggerFallAlert() {
+        if (fallDialogShowing) return
+        fallDialogShowing = true
+        unregisterSensors()
+
+        val dialogView  = LayoutInflater.from(this).inflate(R.layout.dialog_fall_alert, null)
+        val tvCountdown = dialogView.findViewById<TextView>(R.id.tvCountdown)
+
+        fallAlertDialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(false)
+            .setNegativeButton("I'm OK — Stop Alert") { _, _ -> cancelFallAlert() }
+            .create()
+        fallAlertDialog!!.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        fallAlertDialog!!.show()
+
+        countdownTimer = object : CountDownTimer(FALL_COUNTDOWN_MS, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                tvCountdown.text = (millisUntilFinished / 1000).toString()
+            }
+            override fun onFinish() {
+                fallAlertDialog?.dismiss()
+                launchEmergencyFromFall()
+            }
+        }.start()
+    }
+
+    private fun cancelFallAlert() {
+        countdownTimer?.cancel()
+        countdownTimer = null
+        fallDialogShowing = false
+        fallAlertDialog = null
+        if (isFallDetectionEnabled) registerSensors()
+    }
+
+    private fun launchEmergencyFromFall() {
+        fallDialogShowing = false
+        startActivity(Intent(this, EmergencyActivity::class.java).apply {
+            putExtra(EmergencyActivity.EXTRA_AUTO_TRIGGER, true)
+        })
+    }
+
+    // Location updates
     private fun setupLocationUpdates() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 result.lastLocation?.let { location ->
                     currentLatLng = LatLng(location.latitude, location.longitude)
-
                     if (!routeFetched) {
                         routeFetched = true
                         fetchOsrmRoute()
                     }
-
                     updateDistanceETA(location)
                 }
             }
@@ -166,205 +308,117 @@ class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-
-    // OSRM routing
     private fun fetchOsrmRoute() {
         val origin = currentLatLng ?: return
         val dest   = destinationLatLng ?: return
 
-        // OSRM expects lng,lat order (opposite of Google's lat,lng)
         val urlString = "https://router.project-osrm.org/route/v1/foot/" +
                 "${origin.longitude},${origin.latitude};" +
                 "${dest.longitude},${dest.latitude}" +
                 "?overview=full&geometries=polyline&steps=true"
-
-        Log.d(TAG, "Fetching route: $urlString")
 
         Thread {
             var connection: HttpURLConnection? = null
             try {
                 val url = URL(urlString)
                 connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = 10_000   // 10s connect timeout
-                connection.readTimeout    = 10_000   // 10s read timeout
+                connection.connectTimeout = 10_000
+                connection.readTimeout    = 10_000
                 connection.requestMethod  = "GET"
                 connection.setRequestProperty("User-Agent", "SafeWalk-Android/1.0")
 
-                val httpCode = connection.responseCode
-                Log.d(TAG, "OSRM HTTP status: $httpCode")
-
-                if (httpCode != HttpURLConnection.HTTP_OK) {
-                    val errorBody = connection.errorStream?.bufferedReader()?.readText() ?: "no body"
-                    Log.e(TAG, "OSRM error body: $errorBody")
-                    runOnUiThread {
-                        Toast.makeText(this, "Route server returned $httpCode", Toast.LENGTH_LONG).show()
-                    }
+                if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                    runOnUiThread { Toast.makeText(this, "Route server returned ${connection.responseCode}", Toast.LENGTH_LONG).show() }
                     return@Thread
                 }
 
                 val response = connection.inputStream.bufferedReader().readText()
-                Log.d(TAG, "OSRM response (first 300): ${response.take(300)}")
-
                 val json = JSONObject(response)
-                val code = json.getString("code")
-
-                if (code != "Ok") {
-                    Log.e(TAG, "OSRM code not Ok: $code")
-                    runOnUiThread {
-                        Toast.makeText(this, "Routing error: $code", Toast.LENGTH_LONG).show()
-                    }
+                if (json.getString("code") != "Ok") {
+                    runOnUiThread { Toast.makeText(this, "Routing error: ${json.getString("code")}", Toast.LENGTH_LONG).show() }
                     return@Thread
                 }
 
-                val route      = json.getJSONArray("routes").getJSONObject(0)
-                val distanceM  = route.getDouble("distance").roundToInt()
-                val durationS  = route.getDouble("duration").roundToInt()
-                val distText   = if (distanceM >= 1000) "%.1f km".format(distanceM / 1000f)
-                else "$distanceM m"
-                val durText    = "${durationS / 60} min"
+                val route     = json.getJSONArray("routes").getJSONObject(0)
+                val distanceM = route.getDouble("distance").roundToInt()
+                val durationS = route.getDouble("duration").roundToInt()
+                val distText  = if (distanceM >= 1000) "%.1f km".format(distanceM / 1000f) else "$distanceM m"
+                val durText   = "${durationS / 60} min"
+                val points    = decodePolyline(route.getString("geometry"))
 
-                val encodedPolyline = route.getString("geometry")
-                val points          = decodePolyline(encodedPolyline)
-                Log.d(TAG, "Decoded ${points.size} polyline points")
-
-                val leg         = route.getJSONArray("legs").getJSONObject(0)
-                val steps       = leg.getJSONArray("steps")
+                val leg   = route.getJSONArray("legs").getJSONObject(0)
+                val steps = leg.getJSONArray("steps")
                 val instruction = if (steps.length() > 0) {
-                    val maneuver  = steps.getJSONObject(0).getJSONObject("maneuver")
-                    val type      = maneuver.getString("type").replaceFirstChar { it.uppercase() }
+                    val type = steps.getJSONObject(0).getJSONObject("maneuver")
+                        .getString("type").replaceFirstChar { it.uppercase() }
                     "$type towards $destinationName"
-                } else {
-                    "Head towards $destinationName"
-                }
+                } else "Head towards $destinationName"
 
                 runOnUiThread {
                     drawRoutePolyline(points)
                     tvNextInstruction.text = instruction
-                    tvDistance.text        = distText
-                    tvETA.text             = durText
-
+                    tvDistance.text = distText
+                    tvETA.text = durText
                     if (points.size >= 2) {
                         val boundsBuilder = LatLngBounds.Builder()
                         points.forEach { boundsBuilder.include(it) }
-                        try {
-                            map.animateCamera(
-                                CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120)
-                            )
-                        } catch (e: Exception) {
-                            map.animateCamera(CameraUpdateFactory.newLatLngZoom(origin, 15f))
-                        }
+                        try { map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120)) }
+                        catch (e: Exception) { map.animateCamera(CameraUpdateFactory.newLatLngZoom(origin, 15f)) }
                     }
                 }
-
             } catch (e: SocketTimeoutException) {
-                Log.e(TAG, "OSRM timeout", e)
-                runOnUiThread {
-                    Toast.makeText(this, "Route request timed out. Check your internet connection.", Toast.LENGTH_LONG).show()
-                }
+                runOnUiThread { Toast.makeText(this, "Route request timed out.", Toast.LENGTH_LONG).show() }
             } catch (e: UnknownHostException) {
-                Log.e(TAG, "OSRM DNS failure — no internet?", e)
                 runOnUiThread {
                     Toast.makeText(this, "No internet connection. Route unavailable.", Toast.LENGTH_LONG).show()
-                    // Still show straight-line so the user has some guidance
-                    currentLatLng?.let { origin ->
-                        destinationLatLng?.let { dest ->
-                            drawStraightLine(origin, dest)
-                        }
-                    }
+                    currentLatLng?.let { o -> destinationLatLng?.let { d -> drawStraightLine(o, d) } }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "OSRM unexpected error", e)
-                runOnUiThread {
-                    Toast.makeText(this, "Route failed: ${e.javaClass.simpleName} — ${e.message}", Toast.LENGTH_LONG).show()
-                }
+                runOnUiThread { Toast.makeText(this, "Route failed: ${e.message}", Toast.LENGTH_LONG).show() }
             } finally {
                 connection?.disconnect()
             }
         }.start()
     }
 
-
-    // Draw road-following polyline
     private fun drawRoutePolyline(points: List<LatLng>) {
         if (points.isEmpty()) return
         map.clear()
-        destinationLatLng?.let {
-            map.addMarker(MarkerOptions().position(it).title(destinationName))
-        }
-        map.addPolyline(
-            PolylineOptions()
-                .addAll(points)
-                .width(12f)
-                .color(Color.parseColor("#2563EB"))
-                .geodesic(false)
-        )
+        destinationLatLng?.let { map.addMarker(MarkerOptions().position(it).title(destinationName)) }
+        map.addPolyline(PolylineOptions().addAll(points).width(12f).color(Color.parseColor("#2563EB")).geodesic(false))
     }
 
-    // Fallback when no internet — draws a straight line so user isn't left with nothing
     private fun drawStraightLine(origin: LatLng, dest: LatLng) {
         map.clear()
         map.addMarker(MarkerOptions().position(dest).title(destinationName))
-        map.addPolyline(
-            PolylineOptions()
-                .add(origin, dest)
-                .width(8f)
-                .color(Color.parseColor("#94A3B8"))  // grey — indicates approximate
-                .geodesic(true)
-        )
+        map.addPolyline(PolylineOptions().add(origin, dest).width(8f).color(Color.parseColor("#94A3B8")).geodesic(true))
         tvNextInstruction.text = "Approximate route (offline)"
     }
 
-
-    // Google / OSRM encoded polyline decoder
     private fun decodePolyline(encoded: String): List<LatLng> {
         val points = mutableListOf<LatLng>()
-        var index  = 0
-        val len    = encoded.length
-        var lat    = 0
-        var lng    = 0
-
+        var index = 0; val len = encoded.length; var lat = 0; var lng = 0
         while (index < len) {
             var b: Int; var shift = 0; var result = 0
-            do {
-                b = encoded[index++].code - 63
-                result = result or (b and 0x1f shl shift)
-                shift += 5
-            } while (b >= 0x20)
+            do { b = encoded[index++].code - 63; result = result or (b and 0x1f shl shift); shift += 5 } while (b >= 0x20)
             lat += if (result and 1 != 0) (result shr 1).inv() else result shr 1
-
             shift = 0; result = 0
-            do {
-                b = encoded[index++].code - 63
-                result = result or (b and 0x1f shl shift)
-                shift += 5
-            } while (b >= 0x20)
+            do { b = encoded[index++].code - 63; result = result or (b and 0x1f shl shift); shift += 5 } while (b >= 0x20)
             lng += if (result and 1 != 0) (result shr 1).inv() else result shr 1
-
             points.add(LatLng(lat / 1E5, lng / 1E5))
         }
         return points
     }
 
-
-    // Distance / ETA from live GPS (shown before OSRM responds)
     private fun updateDistanceETA(location: Location) {
         val dest = destinationLatLng ?: return
         val results = FloatArray(1)
-        Location.distanceBetween(
-            location.latitude, location.longitude,
-            dest.latitude, dest.longitude,
-            results
-        )
+        Location.distanceBetween(location.latitude, location.longitude, dest.latitude, dest.longitude, results)
         val distanceM = results[0].roundToInt()
-
-        // Only overwrite placeholder values — don't clobber OSRM values
         if (tvDistance.text == "-- m") {
-            tvDistance.text = if (distanceM >= 1000)
-                "%.1f km".format(distanceM / 1000f)
-            else "$distanceM m"
+            tvDistance.text = if (distanceM >= 1000) "%.1f km".format(distanceM / 1000f) else "$distanceM m"
             tvETA.text = "${(distanceM / 80.0).roundToInt()} min"
         }
-
         if (distanceM <= 30) {
             tvNextInstruction.text = "You have arrived at $destinationName"
             stopLocationUpdates()
@@ -375,22 +429,14 @@ class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
         fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
-
     // Click listeners
     private fun setClickListeners() {
 
         fallDetectionRow.setOnClickListener {
-            @Suppress("DEPRECATION")
-            startActivityForResult(
-                Intent(this, SensorActivity::class.java).apply {
-                    putExtra(SensorActivity.EXTRA_FALL_DETECTION_ENABLED, isFallDetectionEnabled)
-                },
-                REQUEST_SENSOR
-            )
+            startActivity(Intent(this, SensorActivity::class.java))
         }
 
         btnChangeDestination.setOnClickListener {
-            stopFallDetection()
             stopLocationUpdates()
             stopWalkService()
             startActivity(Intent(this, MapActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
@@ -404,45 +450,20 @@ class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
         btnStopWalk.setOnClickListener { confirmStopWalk() }
     }
 
-
-    // Fall detection result from SensorActivity
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        @Suppress("DEPRECATION")
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_SENSOR) {
-            isFallDetectionEnabled = data?.getBooleanExtra(
-                SensorActivity.EXTRA_FALL_DETECTION_ENABLED, false
-            ) ?: false
-            updateFallDetectionUI()
-        }
-    }
-
     private fun updateFallDetectionUI() {
         tvFallStatus.text = if (isFallDetectionEnabled) "ACTIVE" else "OFF"
-        tvFallStatus.setTextColor(
-            getColor(if (isFallDetectionEnabled) R.color.success else R.color.text_secondary)
-        )
+        tvFallStatus.setTextColor(getColor(if (isFallDetectionEnabled) R.color.success else R.color.text_secondary))
     }
 
-    private fun stopFallDetection() {
-        isFallDetectionEnabled = false
-        updateFallDetectionUI()
-    }
-
-
-    // Stop walk
     private fun confirmStopWalk() {
         AlertDialog.Builder(this)
             .setTitle("Stop Walk")
             .setMessage("Are you sure you want to stop this walk?")
             .setPositiveButton("Stop") { _, _ ->
-                stopFallDetection()
+                unregisterSensors()
                 stopLocationUpdates()
                 stopWalkService()
-                startActivity(
-                    Intent(this, HomeActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                )
+                startActivity(Intent(this, HomeActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
                 finish()
             }
             .setNegativeButton("Continue", null)
@@ -456,6 +477,9 @@ class RouteActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     override fun onDestroy() {
+        unregisterSensors()
+        countdownTimer?.cancel()
+        fallAlertDialog?.dismiss()
         stopLocationUpdates()
         super.onDestroy()
     }

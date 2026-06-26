@@ -16,12 +16,10 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 class SettingsActivity : AppCompatActivity() {
 
     companion object {
-        const val PREFS_NAME            = "safewalk_prefs"
-        const val KEY_DARK_MODE         = "dark_mode"
-        const val KEY_FALL_DETECTION    = "fall_detection_enabled"
+        const val PREFS_NAME         = "safewalk_prefs"
+        const val KEY_DARK_MODE      = "dark_mode"
+        const val KEY_FALL_DETECTION = "fall_detection_enabled"
 
-        // Call this from Application.onCreate or any Activity to apply
-        // the saved theme before the layout inflates
         fun applyTheme(context: Context) {
             val prefs    = context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             val darkMode = prefs.getBoolean(KEY_DARK_MODE, false)
@@ -32,8 +30,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private lateinit var prefs: SharedPreferences
-
     private lateinit var btnBack: ImageButton
     private lateinit var cardLightMode: CardView
     private lateinit var cardDarkMode: CardView
@@ -43,21 +39,34 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var switchFallDetection: SwitchMaterial
     private lateinit var tvFallDetectionStatus: TextView
 
-    private var isDarkMode         = false
-    private var isFallDetectionOn  = false
+    private var isDarkMode = false
+
+    // Live sync
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == KEY_FALL_DETECTION) syncFallDetectionSwitch()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
-        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-
         initViews()
-        loadSavedSettings()
+        loadSavedTheme()
+        syncFallDetectionSwitch()
         setClickListeners()
         setupBackHandler()
     }
 
+    override fun onResume() {
+        super.onResume()
+        FallDetectionPrefs.registerListener(this, prefsListener)
+        syncFallDetectionSwitch()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        FallDetectionPrefs.unregisterListener(this, prefsListener)
+    }
 
     // Init
     private fun initViews() {
@@ -71,20 +80,13 @@ class SettingsActivity : AppCompatActivity() {
         tvFallDetectionStatus = findViewById(R.id.tvFallDetectionStatus)
     }
 
-
-    // Load saved preferences and apply to UI
-    private fun loadSavedSettings() {
-        isDarkMode        = prefs.getBoolean(KEY_DARK_MODE, false)
-        isFallDetectionOn = prefs.getBoolean(KEY_FALL_DETECTION, false)
-
-        applyThemeUI(isDarkMode, animate = false)
-        applyFallDetectionUI(isFallDetectionOn)
-
-        switchFallDetection.isChecked = isFallDetectionOn
+    // Theme
+    private fun loadSavedTheme() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        isDarkMode = prefs.getBoolean(KEY_DARK_MODE, false)
+        applyThemeUI(isDarkMode)
     }
 
-
-    // Click listeners
     private fun setClickListeners() {
 
         btnBack.setOnClickListener {
@@ -95,9 +97,8 @@ class SettingsActivity : AppCompatActivity() {
         cardLightMode.setOnClickListener {
             if (isDarkMode) {
                 isDarkMode = false
-                prefs.edit().putBoolean(KEY_DARK_MODE, false).apply()
-                applyThemeUI(false, animate = true)
-                // Apply system-wide — recreates all activities
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(KEY_DARK_MODE, false).apply()
+                applyThemeUI(false)
                 AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
             }
         }
@@ -105,21 +106,19 @@ class SettingsActivity : AppCompatActivity() {
         cardDarkMode.setOnClickListener {
             if (!isDarkMode) {
                 isDarkMode = true
-                prefs.edit().putBoolean(KEY_DARK_MODE, true).apply()
-                applyThemeUI(true, animate = true)
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(KEY_DARK_MODE, true).apply()
+                applyThemeUI(true)
                 AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
             }
         }
 
         switchFallDetection.setOnCheckedChangeListener { _, isChecked ->
-            isFallDetectionOn = isChecked
-            prefs.edit().putBoolean(KEY_FALL_DETECTION, isChecked).apply()
-            applyFallDetectionUI(isChecked)
+            FallDetectionPrefs.setEnabled(this, isChecked)
+            updateFallDetectionStatusText(isChecked)
         }
     }
 
-    // Theme UI — highlight active card
-    private fun applyThemeUI(darkMode: Boolean, animate: Boolean) {
+    private fun applyThemeUI(darkMode: Boolean) {
         val activeColor   = getColor(R.color.primary)
         val inactiveColor = getColor(R.color.surface)
         val activeText    = getColor(R.color.white)
@@ -129,24 +128,32 @@ class SettingsActivity : AppCompatActivity() {
         cardDarkMode.setCardBackgroundColor (if ( darkMode) activeColor else inactiveColor)
         ivDarkModeIcon.setColorFilter       (if ( darkMode) activeText  else inactiveText)
         tvDarkModeLabel.setTextColor        (if ( darkMode) activeText  else inactiveText)
-
         tvCurrentTheme.text = if (darkMode) "Dark" else "Light"
     }
 
+    // Fall detection — read from / write to the shared helper so this
+    // switch always reflects whatever RouteActivity/SensorActivity set.
+    private fun syncFallDetectionSwitch() {
+        val enabled = FallDetectionPrefs.isEnabled(this)
+        switchFallDetection.setOnCheckedChangeListener(null)
+        switchFallDetection.isChecked = enabled
+        switchFallDetection.setOnCheckedChangeListener { _, isChecked ->
+            FallDetectionPrefs.setEnabled(this, isChecked)
+            updateFallDetectionStatusText(isChecked)
+        }
+        updateFallDetectionStatusText(enabled)
+    }
 
-    // Fall detection UI
-    private fun applyFallDetectionUI(enabled: Boolean) {
+    private fun updateFallDetectionStatusText(enabled: Boolean) {
         tvFallDetectionStatus.text = if (enabled)
             "ON — Active during walks"
         else
-            "OFF — Enable during walks"
+            "OFF — Enable to activate during walks"
         tvFallDetectionStatus.setTextColor(
             getColor(if (enabled) R.color.success else R.color.text_secondary)
         )
     }
 
-
-    // Back handler
     private fun setupBackHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {

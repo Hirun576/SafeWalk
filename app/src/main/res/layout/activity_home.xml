@@ -592,7 +592,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:padding="16dp"
-            android:text="SafeWalk v1.0"
+            android:text="SafeWalk v1.0 by Hirun Hanska"
             android:textSize="12sp"
             android:textColor="@color/text_secondary" />
 
