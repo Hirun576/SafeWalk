@@ -11,6 +11,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
 import com.google.android.material.switchmaterial.SwitchMaterial
 
 class SettingsActivity : AppCompatActivity() {
@@ -33,7 +34,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var btnBack: ImageButton
     private lateinit var cardLightMode: CardView
     private lateinit var cardDarkMode: CardView
+    private lateinit var ivLightModeIcon: ImageView
     private lateinit var ivDarkModeIcon: ImageView
+    private lateinit var tvLightModeLabel: TextView
     private lateinit var tvDarkModeLabel: TextView
     private lateinit var tvCurrentTheme: TextView
     private lateinit var switchFallDetection: SwitchMaterial
@@ -41,7 +44,6 @@ class SettingsActivity : AppCompatActivity() {
 
     private var isDarkMode = false
 
-    // Live sync
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == KEY_FALL_DETECTION) syncFallDetectionSwitch()
     }
@@ -73,7 +75,9 @@ class SettingsActivity : AppCompatActivity() {
         btnBack               = findViewById(R.id.btnBack)
         cardLightMode         = findViewById(R.id.cardLightMode)
         cardDarkMode          = findViewById(R.id.cardDarkMode)
+        ivLightModeIcon       = findViewById(R.id.ivLightModeIcon)
         ivDarkModeIcon        = findViewById(R.id.ivDarkModeIcon)
+        tvLightModeLabel      = findViewById(R.id.tvLightModeLabel)
         tvDarkModeLabel       = findViewById(R.id.tvDarkModeLabel)
         tvCurrentTheme        = findViewById(R.id.tvCurrentTheme)
         switchFallDetection   = findViewById(R.id.switchFallDetection)
@@ -83,7 +87,16 @@ class SettingsActivity : AppCompatActivity() {
     // Theme
     private fun loadSavedTheme() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        isDarkMode = prefs.getBoolean(KEY_DARK_MODE, false)
+
+        isDarkMode = if (prefs.contains(KEY_DARK_MODE)) {
+            prefs.getBoolean(KEY_DARK_MODE, false)
+        } else {
+            val nightModeFlags = resources.configuration.uiMode and
+                    android.content.res.Configuration.UI_MODE_NIGHT_MASK
+
+            nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+
         applyThemeUI(isDarkMode)
     }
 
@@ -119,20 +132,25 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun applyThemeUI(darkMode: Boolean) {
-        val activeColor   = getColor(R.color.primary)
-        val inactiveColor = getColor(R.color.surface)
-        val activeText    = getColor(R.color.white)
-        val inactiveText  = getColor(R.color.text_secondary)
+        val selectedBg     = ContextCompat.getColor(this, R.color.primary)
+        val unselectedBg   = ContextCompat.getColor(this, R.color.divider)
+        val selectedFg     = ContextCompat.getColor(this, R.color.white)
+        val unselectedFg   = ContextCompat.getColor(this, R.color.text_primary)
 
-        cardLightMode.setCardBackgroundColor(if (!darkMode) activeColor else inactiveColor)
-        cardDarkMode.setCardBackgroundColor (if ( darkMode) activeColor else inactiveColor)
-        ivDarkModeIcon.setColorFilter       (if ( darkMode) activeText  else inactiveText)
-        tvDarkModeLabel.setTextColor        (if ( darkMode) activeText  else inactiveText)
+        // Light Mode card
+        cardLightMode.setCardBackgroundColor(if (!darkMode) selectedBg else unselectedBg)
+        ivLightModeIcon.setColorFilter(if (!darkMode) selectedFg else unselectedFg)
+        tvLightModeLabel.setTextColor(if (!darkMode) selectedFg else unselectedFg)
+
+        // Dark Mode card
+        cardDarkMode.setCardBackgroundColor(if (darkMode) selectedBg else unselectedBg)
+        ivDarkModeIcon.setColorFilter(if (darkMode) selectedFg else unselectedFg)
+        tvDarkModeLabel.setTextColor(if (darkMode) selectedFg else unselectedFg)
+
         tvCurrentTheme.text = if (darkMode) "Dark" else "Light"
     }
 
-    // Fall detection — read from / write to the shared helper so this
-    // switch always reflects whatever RouteActivity/SensorActivity set.
+    // Fall detection
     private fun syncFallDetectionSwitch() {
         val enabled = FallDetectionPrefs.isEnabled(this)
         switchFallDetection.setOnCheckedChangeListener(null)
@@ -150,7 +168,7 @@ class SettingsActivity : AppCompatActivity() {
         else
             "OFF — Enable to activate during walks"
         tvFallDetectionStatus.setTextColor(
-            getColor(if (enabled) R.color.success else R.color.text_secondary)
+            ContextCompat.getColor(this, if (enabled) R.color.success else R.color.text_secondary)
         )
     }
 

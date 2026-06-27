@@ -131,7 +131,7 @@
                             android:layout_marginEnd="6dp"
                             app:cardCornerRadius="12dp"
                             app:cardElevation="0dp"
-                            app:cardBackgroundColor="@color/primary"
+                            app:cardBackgroundColor="@color/divider"
                             android:clickable="true"
                             android:focusable="true"
                             android:foreground="?attr/selectableItemBackground">
@@ -143,20 +143,22 @@
                                 android:gravity="center">
 
                                 <ImageView
+                                    android:id="@+id/ivLightModeIcon"
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
                                     android:src="@drawable/ic_light_mode"
                                     android:contentDescription="Light mode"
-                                    app:tint="@color/white" />
+                                    app:tint="@color/text_primary" />
 
                                 <TextView
+                                    android:id="@+id/tvLightModeLabel"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
                                     android:text="Light"
                                     android:textSize="13sp"
                                     android:textStyle="bold"
-                                    android:textColor="@color/white" />
+                                    android:textColor="@color/text_primary" />
                             </LinearLayout>
                         </androidx.cardview.widget.CardView>
 
@@ -169,7 +171,7 @@
                             android:layout_marginStart="6dp"
                             app:cardCornerRadius="12dp"
                             app:cardElevation="0dp"
-                            app:cardBackgroundColor="@color/surface"
+                            app:cardBackgroundColor="@color/divider"
                             android:clickable="true"
                             android:focusable="true"
                             android:foreground="?attr/selectableItemBackground">

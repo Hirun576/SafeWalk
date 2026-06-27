@@ -14,10 +14,10 @@
         android:padding="32dp">
 
         <!-- App Logo -->
-        <ImageView
+        <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/imgLogo"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
             android:layout_marginTop="48dp"
             android:src="@drawable/ic_safewalk_logo"
             android:contentDescription="SafeWalk Logo" />
@@ -145,8 +145,8 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="52dp"
-                android:layout_weight="1"
                 android:layout_marginEnd="8dp"
+                android:layout_weight="1"
                 android:text="Google"
                 android:textColor="@color/text_primary"
                 app:icon="@drawable/ic_google"

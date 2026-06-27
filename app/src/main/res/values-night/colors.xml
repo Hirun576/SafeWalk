@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand -->
+    <color name="primary">#3B82F6</color>
+    <color name="primary_dark">#2563EB</color>
+    <color name="primary_light">#1E3A5F</color>
+
+    <!-- Backgrounds -->
+    <color name="background">#0F172A</color>
+    <color name="surface">#1E293B</color>
+
+    <!-- Text -->
+    <color name="text_primary">#F1F5F9</color>
+    <color name="text_secondary">#94A3B8</color>
+
+    <!-- UI -->
+    <color name="divider">#334155</color>
+    <color name="input_stroke">#475569</color>
+    <color name="input_stroke_focused">#3B82F6</color>
+
+    <!-- Feedback -->
+    <color name="error">#F87171</color>
+    <color name="success">#4ADE80</color>
+    <color name="warning">#FB923C</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+</resources>
